@@ -42,7 +42,7 @@ func (cfg *Config) SetUser(username string) error {
 		return err
 	}
 
-	err = os.WriteFile(configPath, data, 0744)
+	err = os.WriteFile(configPath, data, 0o744)
 	if err != nil {
 		return err
 	}

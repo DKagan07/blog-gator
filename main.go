@@ -1,15 +1,20 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 
+	_ "github.com/lib/pq"
+
 	"blog-gator/internal/config"
+	"blog-gator/internal/database"
 )
 
 type state struct {
 	cfg *config.Config
+	db  *database.Queries
 }
 
 func main() {
@@ -20,9 +25,19 @@ func main() {
 		return
 	}
 
+	// Connecting to Postgres
+	db, err := sql.Open("postgres", cfg.DbURL)
+	if err != nil {
+		fmt.Println("cannot connect to Postgres")
+		os.Exit(1)
+	}
+
+	dbQueries := database.New(db)
+
 	// create a new instance of a state struct
 	s := &state{
 		cfg: &cfg,
+		db:  dbQueries,
 	}
 
 	// create a new instance of a commands struct
@@ -30,8 +45,9 @@ func main() {
 		cmds: make(map[string]func(*state, command) error),
 	}
 
-	// Registering the "login" command, which should be basic
+	// Registering commands, which should be basic
 	commands.register("login", handlerLogin)
+	commands.register("register", handlerRegister)
 
 	// Now parsing the args
 	if len(os.Args) < 2 {
@@ -47,14 +63,13 @@ func main() {
 		args = os.Args[2:]
 	}
 
-	fmt.Println("args blah: ", args)
-
 	userCommand := command{
 		Name:     cmmd,
 		Commands: args,
 	}
 
 	if err = commands.run(s, userCommand); err != nil {
-		log.Fatalf("failed to run command %s: %v", cmmd, err)
+		log.Printf("failed to run command %s: %v", cmmd, err)
+		os.Exit(1)
 	}
 }
